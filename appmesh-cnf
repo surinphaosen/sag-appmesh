@@ -1,0 +1,70 @@
+docker system prune
+
+#install istio 
+##config system path
+istioctl manifest apply --set profile=demo  (for install)
+##kubectl label namespace default istio-injection=enabled
+
+docker pull softwareag/microgateway-trial:10.15
+docker pull softwareag/apigateway-trial:10.15
+
+docker pull softwareag/microgateway-trial:10.11
+docker pull softwareag/apigateway-trial:10.11
+
+kubectl create namespace appmesh
+kubectl label namespace appmesh istio-injection=enabled
+#kubectl describe namespace appmesh
+kubectl config set-context --current --namespace=appmesh
+kubectl create deployment apigw --image softwareag/apigateway-trial:10.11
+kubectl expose deployment apigw --port 5555 --target-port 5555 --name http-apigw
+kubectl expose deployment apigw --port 9072 --target-port 9072 --name http-apigwui --type=LoadBalancer
+kubectl expose deployment apigw --port 9999 --target-port 9999 --name http-apigwdiag --type=LoadBalancer
+kubectl expose deployment apigw --port 5555 --target-port 5555 --name http-apigwisext --type=LoadBalancer
+
+
+softwareag/microgateway-trial:10.15
+
+kubectl create deployment apiserver --image apiserver:1.0
+kubectl expose deployment apiserver --port 8080 --target-port 8080 --name http-apiserver --type=NodePort
+
+kubectl create deployment apisamplerest --image surinp/samplerest:1.0
+kubectl expose deployment apisamplerest --port 8080 --target-port 80 --name http-apisamplerest --type=NodePort
+
+
+docker run -d -p 5555:5555 -p 9072:9072 --hostname apigw-host --name apigw softwareag/apigateway-trial:10.15
+
+
+==========================================================================
+open powershell
+wsl -d docker-desktop
+sysctl -w vm.max_map_count=262144
+echo "vm.max_map_count = 262144" > /etc/sysctl.d/99-docker-desktop.conf
+=========================================================================
+
+istioctl manifest apply --set components.cni.enabled=true 
+
+
+
+==========================================================================
+kubectl edit deployment kubernetes-dashboard -n kubernetes-dashboard
+#- --enable-skip-login
+kubectl proxy
+http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/
+
+==========================================================================
+
+https://github.com/kubernetes/dashboard/issues/4179
+https://andrewlock.net/running-kubernetes-and-the-dashboard-with-docker-desktop/
+
+kubectl edit deployment metrics-server -n kube-system
+--kubelet-insecure-tls
+
+
+=========================
+docker run -p 9090:4485 --env mcgw_api_gateway_url=http://localhost:5555/rest/apigateway --env mcgw_api_gateway_user=Administrator --env mcgw_api_gateway_password=manage --env mcgw_downloads_apis=EmployeeService --name microgateway softwareag/microgateway-trial:10.15
+
+
+kubectl create deployment apigw --image softwareag/apigateway-trial:10.11
+
+
+surinp/mymcforappmesh:mcgw-app-mesh
